@@ -12,3 +12,9 @@ all: unit-test
 
 unit-test:
 	${BUILD_CMD}
+
+clean:
+	rm -f bin/*
+
+realclean: clean
+	go clean -modcache -cache
