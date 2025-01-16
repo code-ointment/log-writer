@@ -15,6 +15,10 @@ import (
 	logwriter "github.com/code-ointment/log-writer"
 )
 
+const (
+	logPermissions os.FileMode = 0644
+)
+
 type zippedFile struct {
 	FileName string
 	Modtime  int64
@@ -71,7 +75,7 @@ func (lw *LogFileWriter) Write(p []byte) (int, error) {
 
 	if lw.fd == nil {
 		lw.fd, err = os.OpenFile(lw.FileName,
-			os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+			os.O_CREATE|os.O_APPEND|os.O_WRONLY, logPermissions)
 		if err != nil {
 			fmt.Printf("failed opening %s\n", lw.FileName)
 			return 0, err
