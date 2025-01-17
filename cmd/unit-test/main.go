@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	logwriter "github.com/code-ointment/log-writer"
-	logfile "github.com/code-ointment/log-writer/logfile"
+	"github.com/code-ointment/log-writer/logfile"
 )
 
 func main() {
