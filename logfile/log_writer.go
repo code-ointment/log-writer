@@ -27,9 +27,9 @@ type zippedFile struct {
 type LogFileWriter struct {
 	FileName     string
 	Generations  int
-	Size         int
+	Size         int64
 	fd           *os.File
-	bytesWritten int
+	bytesWritten int64
 	zipRequests  chan string
 	zippedFiles  []*zippedFile
 	zipWait      sync.WaitGroup
@@ -41,7 +41,8 @@ type LogFileWriter struct {
 * generations - number of compressed logs to retain.
 * sz - number of bytes written before compressing.
  */
-func NewLogFileWriter(fileName string, generations int, sz int) *LogFileWriter {
+func NewLogFileWriter(
+	fileName string, generations int, sz int64) *LogFileWriter {
 
 	absFname, err := filepath.Abs(fileName)
 	if err != nil {
@@ -69,6 +70,9 @@ func (lw *LogFileWriter) Close() {
 	lw.zipWait.Wait()
 }
 
+/*
+* Write bytes to the file and check for size exceeded.
+ */
 func (lw *LogFileWriter) Write(p []byte) (int, error) {
 
 	var err error
@@ -80,13 +84,16 @@ func (lw *LogFileWriter) Write(p []byte) (int, error) {
 			fmt.Printf("failed opening %s\n", lw.FileName)
 			return 0, err
 		}
+
+		st, _ := os.Lstat(lw.FileName)
+		lw.bytesWritten = st.Size()
 	}
 
 	n, err := lw.fd.Write(p)
 	if err != nil {
 		fmt.Printf("failed writing %s\n", lw.FileName)
 	}
-	lw.bytesWritten += n
+	lw.bytesWritten += int64(n)
 
 	// We will exceed lw.Size by the length of the buffer. I mean to do this.
 	if lw.bytesWritten >= lw.Size {
@@ -208,6 +215,7 @@ func (lw *LogFileWriter) getZipFileName(fname string) string {
 	// Drop trailing random number
 	fields = fields[:flen-1]
 
+	// Try a new generation first.
 	id := lw.getNextNewId()
 	if id != -1 {
 		fields = append(fields, strconv.Itoa(id), "gz")
@@ -216,6 +224,7 @@ func (lw *LogFileWriter) getZipFileName(fname string) string {
 		return fname
 	}
 
+	// Reuse old zipped file name.
 	return lw.oldestZippedFile()
 }
 
@@ -252,6 +261,9 @@ func (lw *LogFileWriter) zipper() {
 	}
 }
 
+/*
+* Zip src to dest.
+ */
 func (lw *LogFileWriter) doZip(src string, dest string) {
 
 	in, err := os.Open(src)
